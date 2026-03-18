@@ -1,0 +1,11 @@
+.venv/
+.git/
+.env
+__pycache__/
+*.pyc
+data/cache.db
+data/trades.db
+data/*.db-journal
+.DS_Store
+tests/
+*.egg-info/

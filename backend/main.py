@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
 from backend.config import settings
+from backend.middleware import RateLimitMiddleware
 from backend.routers import chat, market, portfolio, trading
 from backend.services import ServiceContainer
 from backend.services.cache_service import CacheService
@@ -63,9 +64,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -82,8 +84,6 @@ async def health():
     return {
         "status": "ok",
         "version": "5.0.0",
-        "ai_available": settings.anthropic_api_key is not None,
-        "trading_available": settings.alpaca_api_key is not None,
     }
 
 

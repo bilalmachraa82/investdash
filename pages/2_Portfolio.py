@@ -11,9 +11,9 @@ client = InvestDashClient()
 
 def _color(val: float) -> str:
     if val > 0:
-        return "color: #34a853"
+        return "color: #00C853"
     elif val < 0:
-        return "color: #ea4335"
+        return "color: #FF1744"
     return ""
 
 
@@ -91,6 +91,8 @@ if selected:
                         high=chart_df["high"],
                         low=chart_df["low"],
                         close=chart_df["close"],
+                        increasing_line_color="#00C853", increasing_fillcolor="#00C853",
+                        decreasing_line_color="#FF1744", decreasing_fillcolor="#FF1744",
                     )]
                 )
                 fig.update_layout(
@@ -98,6 +100,8 @@ if selected:
                     height=400,
                     margin=dict(t=40, b=20, l=40, r=20),
                     xaxis_rangeslider_visible=False,
+                    template="plotly_dark",
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                 )
                 st.plotly_chart(fig, use_container_width=True)
         except Exception:
@@ -117,10 +121,16 @@ try:
     if alloc_data:
         labels = list(alloc_data.keys())
         values = list(alloc_data.values())
+        fintech_colors = ["#2962FF", "#00E5FF", "#00C853", "#FF1744", "#FFAB00", "#AA00FF", "#3D5AFE", "#1DE9B6"]
         fig = go.Figure(
-            data=[go.Pie(labels=labels, values=values, hole=0.4)]
+            data=[go.Pie(labels=labels, values=values, hole=0.4,
+                         marker=dict(colors=fintech_colors[:len(labels)]))]
         )
-        fig.update_layout(height=400, margin=dict(t=20, b=20, l=20, r=20))
+        fig.update_layout(
+            height=400, margin=dict(t=20, b=20, l=20, r=20),
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        )
         st.plotly_chart(fig, use_container_width=True)
 except Exception:
     st.caption("Allocation data unavailable.")

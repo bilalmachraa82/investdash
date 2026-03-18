@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     # Server
     api_host: str = "0.0.0.0"
     api_port: int = 8000
+    cors_origins: list[str] = ["http://localhost:8501", "http://localhost:3000"]
 
     # Cache TTLs (seconds)
     cache_ttl_quote: int = 60

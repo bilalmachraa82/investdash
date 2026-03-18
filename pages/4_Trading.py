@@ -181,9 +181,9 @@ with tab_positions:
             # Color P/L
             def color_pl(val):
                 if val > 0:
-                    return "color: #10b981"
+                    return "color: #00C853"
                 elif val < 0:
-                    return "color: #ef4444"
+                    return "color: #FF1744"
                 return ""
 
             st.dataframe(

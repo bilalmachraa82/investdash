@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Path, Request
 
 from backend.exceptions import PortfolioError
 
@@ -51,8 +51,11 @@ async def get_allocation(request: Request, allocation_type: str):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+_TICKER = Path(description="Stock ticker symbol", pattern=r"^[A-Z0-9.\-\^]{1,10}$")
+
+
 @router.get("/holding/{ticker}")
-async def get_holding(request: Request, ticker: str):
+async def get_holding(request: Request, ticker: str = _TICKER):
     holding = await _get_services(request).portfolio.get_holding_detail(ticker)
     if holding is None:
         raise HTTPException(status_code=404, detail=f"{ticker} not found in portfolio")

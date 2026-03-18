@@ -43,6 +43,8 @@ with tab_single:
                     data=[go.Candlestick(
                         x=df["date"], open=df["open"], high=df["high"],
                         low=df["low"], close=df["close"],
+                        increasing_line_color="#00C853", increasing_fillcolor="#00C853",
+                        decreasing_line_color="#FF1744", decreasing_fillcolor="#FF1744",
                     )]
                 )
                 fig.update_layout(
@@ -50,6 +52,8 @@ with tab_single:
                     height=500,
                     xaxis_rangeslider_visible=False,
                     margin=dict(t=40, b=20, l=40, r=20),
+                    template="plotly_dark",
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                 )
                 st.plotly_chart(fig, use_container_width=True)
         except Exception:
@@ -99,8 +103,9 @@ with tab_compare:
             # Overlay price chart
             st.subheader("Price Comparison (Normalized)")
             compare_period = st.selectbox("Period", ["1mo", "3mo", "6mo", "1y"], index=2, key="compare_period")
+            compare_colors = ["#2962FF", "#00E5FF", "#00C853", "#FFAB00"]
             fig = go.Figure()
-            for t in tickers:
+            for idx, t in enumerate(tickers):
                 try:
                     bars = client.get_history(t, period=compare_period)
                     if bars:
@@ -108,7 +113,10 @@ with tab_compare:
                         base = df["close"].iloc[0]
                         if base > 0:
                             normalized = ((df["close"] / base) - 1) * 100
-                            fig.add_trace(go.Scatter(x=df["date"], y=normalized, name=t, mode="lines"))
+                            fig.add_trace(go.Scatter(
+                                x=df["date"], y=normalized, name=t, mode="lines",
+                                line=dict(color=compare_colors[idx % len(compare_colors)]),
+                            ))
                 except Exception:
                     continue
 
@@ -117,5 +125,7 @@ with tab_compare:
                 height=500,
                 margin=dict(t=20, b=20, l=40, r=20),
                 legend=dict(orientation="h", yanchor="bottom", y=1.02),
+                template="plotly_dark",
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             )
             st.plotly_chart(fig, use_container_width=True)

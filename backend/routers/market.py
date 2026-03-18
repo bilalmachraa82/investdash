@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Path, Query, Request
 
 from backend.exceptions import MarketDataError
 
@@ -11,8 +11,11 @@ def _get_services(request: Request):
     return request.app.state.services
 
 
+_TICKER = Path(description="Stock ticker symbol", pattern=r"^[A-Z0-9.\-\^]{1,10}$")
+
+
 @router.get("/quote/{ticker}")
-async def get_quote(request: Request, ticker: str):
+async def get_quote(request: Request, ticker: str = _TICKER):
     try:
         quote = await _get_services(request).market_data.get_quote(ticker)
         return quote.model_dump(mode="json")
@@ -33,7 +36,7 @@ async def get_quotes(request: Request, tickers: str = Query(..., description="Co
 @router.get("/history/{ticker}")
 async def get_history(
     request: Request,
-    ticker: str,
+    ticker: str = _TICKER,
     period: str = "1y",
     interval: str = "1d",
 ):
@@ -45,7 +48,7 @@ async def get_history(
 
 
 @router.get("/fundamentals/{ticker}")
-async def get_fundamentals(request: Request, ticker: str):
+async def get_fundamentals(request: Request, ticker: str = _TICKER):
     try:
         data = await _get_services(request).market_data.get_fundamentals(ticker)
         return data.model_dump(mode="json")

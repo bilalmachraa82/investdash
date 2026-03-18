@@ -36,10 +36,18 @@ def render_kpi_cards(summary: dict):
 def render_allocation_chart(title: str, data: dict[str, float]):
     labels = list(data.keys())
     values = list(data.values())
+    fintech_colors = ["#2962FF", "#00E5FF", "#00C853", "#FF1744", "#FFAB00", "#AA00FF", "#3D5AFE", "#1DE9B6"]
     fig = go.Figure(
-        data=[go.Pie(labels=labels, values=values, hole=0.4, textinfo="label+percent")]
+        data=[go.Pie(
+            labels=labels, values=values, hole=0.4, textinfo="label+percent",
+            marker=dict(colors=fintech_colors[:len(labels)]),
+        )]
     )
-    fig.update_layout(title_text=title, margin=dict(t=40, b=20, l=20, r=20), height=350)
+    fig.update_layout(
+        title_text=title, margin=dict(t=40, b=20, l=20, r=20), height=350,
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 
@@ -52,7 +60,7 @@ def render_exposure_bars(summary: dict):
         summary["bond_pct"],
         summary["reit_pct"],
     ]
-    colors = ["#4285f4", "#f4b400", "#ffd700", "#34a853", "#ea4335"]
+    colors = ["#2962FF", "#FFAB00", "#FFD700", "#00C853", "#FF1744"]
     fig = go.Figure(
         data=[go.Bar(x=categories, y=values, marker_color=colors, text=[f"{v:.1f}%" for v in values], textposition="auto")]
     )
@@ -61,6 +69,8 @@ def render_exposure_bars(summary: dict):
         yaxis_title="% of Portfolio",
         margin=dict(t=40, b=20, l=40, r=20),
         height=350,
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
     )
     st.plotly_chart(fig, use_container_width=True)
 
