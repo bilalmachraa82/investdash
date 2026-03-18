@@ -17,10 +17,11 @@ COPY mcp_server/ mcp_server/
 COPY pages/ pages/
 COPY data/ data/
 COPY streamlit_app.py .
+COPY start.sh .
 COPY .streamlit/ .streamlit/
 
-# Expose ports: 8000 (API) + 8501 (Streamlit)
+# Expose ports
 EXPOSE 8000 8501
 
-# Default: run FastAPI
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run both API + Streamlit in one container
+CMD ["bash", "start.sh"]
