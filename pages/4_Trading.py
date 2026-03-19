@@ -1,4 +1,4 @@
-"""Trading — Alpaca paper trading with order form, positions, and history."""
+"""Trading — Paper trading with order form, positions, and history."""
 
 import streamlit as st
 import pandas as pd
@@ -41,7 +41,9 @@ if status.get("status") == "not_configured":
     st.stop()
 
 # ── Trading is active — build the UI ────────────────────────────────
-st.caption("Paper Trading via Alpaca")
+broker = status.get("broker", "simulator")
+broker_label = "Local Simulator ($100k virtual)" if broker == "simulator" else "Alpaca Paper Trading"
+st.caption(f"Paper Trading via {broker_label}")
 
 # Tabs
 tab_order, tab_positions, tab_orders, tab_history, tab_account = st.tabs(

@@ -40,17 +40,24 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("No ANTHROPIC_API_KEY — AI chat disabled")
 
-    # Trading (optional)
+    # Trading — Alpaca if keys available, otherwise local simulator
     if settings.alpaca_api_key and settings.alpaca_secret_key:
         try:
             from backend.services.trading_service import TradingService
 
             container.trading = TradingService(market_data, portfolio_svc)
-            logger.info("Trading service initialized (paper={})", settings.alpaca_paper)
+            logger.info("Trading: Alpaca (paper={})", settings.alpaca_paper)
         except Exception as e:
-            logger.warning("Trading service failed to initialize: {}", e)
+            logger.warning("Alpaca failed ({}), falling back to simulator", e)
+            from backend.services.simulated_broker import SimulatedBroker
+
+            container.trading = SimulatedBroker(market_data, portfolio_svc)
+            logger.info("Trading: SimulatedBroker (local paper trading)")
     else:
-        logger.info("No Alpaca keys — trading disabled")
+        from backend.services.simulated_broker import SimulatedBroker
+
+        container.trading = SimulatedBroker(market_data, portfolio_svc)
+        logger.info("Trading: SimulatedBroker (no broker keys needed)")
 
     app.state.services = container
     yield

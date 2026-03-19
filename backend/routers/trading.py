@@ -23,8 +23,16 @@ def _get_trading(request: Request):
 async def trading_status(request: Request):
     trading = getattr(request.app.state.services, "trading", None)
     if trading is None:
-        return {"status": "not_configured", "message": "Trading requires Alpaca API keys."}
-    return {"status": "active", "message": "Paper trading is ready."}
+        return {"status": "not_configured", "message": "Trading requires setup."}
+
+    from backend.services.simulated_broker import SimulatedBroker
+
+    broker_type = "simulator" if isinstance(trading, SimulatedBroker) else "alpaca"
+    return {
+        "status": "active",
+        "broker": broker_type,
+        "message": f"Paper trading ready ({broker_type}).",
+    }
 
 
 @router.post("/preview")

@@ -12,7 +12,7 @@ class TradeRequest(BaseModel):
     limit_price: Optional[float] = None
     stop_price: Optional[float] = None
     time_in_force: Literal["day", "gtc", "ioc"] = "day"
-    broker: Literal["alpaca", "public"] = "alpaca"
+    broker: Literal["alpaca", "simulator", "public"] = "simulator"
     paper: bool = True
 
 

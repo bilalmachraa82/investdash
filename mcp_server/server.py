@@ -28,14 +28,20 @@ services = ServiceContainer(
     portfolio=_portfolio,
 )
 
-# Optionally build trading service
+# Trading — Alpaca if keys available, otherwise local simulator
 if settings.alpaca_api_key and settings.alpaca_secret_key:
     try:
         from backend.services.trading_service import TradingService
 
         services.trading = TradingService(_market, _portfolio)
     except Exception:
-        pass  # trading will remain None
+        from backend.services.simulated_broker import SimulatedBroker
+
+        services.trading = SimulatedBroker(_market, _portfolio)
+else:
+    from backend.services.simulated_broker import SimulatedBroker
+
+    services.trading = SimulatedBroker(_market, _portfolio)
 
 # Register tools
 register_portfolio_tools(mcp, services)
