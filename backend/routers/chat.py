@@ -3,13 +3,18 @@ from __future__ import annotations
 import json
 import uuid
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from backend.exceptions import AIEngineError
+from backend.middleware import verify_api_key
 from backend.models.chat import ChatRequest
 
-router = APIRouter(prefix="/api/chat", tags=["chat"])
+router = APIRouter(
+    prefix="/api/chat",
+    tags=["chat"],
+    dependencies=[Depends(verify_api_key)],
+)
 
 
 @router.post("")

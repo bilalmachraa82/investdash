@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
 from backend.config import settings
-from backend.middleware import RateLimitMiddleware
+from backend.middleware import RateLimitMiddleware, SecurityHeadersMiddleware
 from backend.routers import chat, market, portfolio, trading
 from backend.services import ServiceContainer
 from backend.services.cache_service import CacheService
@@ -71,13 +71,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=settings.cors_allow_methods,
+    allow_headers=settings.cors_allow_headers,
 )
 
 app.include_router(portfolio.router)
@@ -101,7 +102,7 @@ def main():
         "backend.main:app",
         host=settings.api_host,
         port=settings.api_port,
-        reload=True,
+        reload=settings.debug,
     )
 
 

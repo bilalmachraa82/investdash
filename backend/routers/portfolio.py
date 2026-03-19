@@ -1,10 +1,15 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Path, Request
+from fastapi import APIRouter, Depends, HTTPException, Path, Request
 
 from backend.exceptions import PortfolioError
+from backend.middleware import verify_api_key
 
-router = APIRouter(prefix="/api/portfolio", tags=["portfolio"])
+router = APIRouter(
+    prefix="/api/portfolio",
+    tags=["portfolio"],
+    dependencies=[Depends(verify_api_key)],
+)
 
 
 def _get_services(request: Request):
@@ -15,8 +20,8 @@ def _get_services(request: Request):
 async def get_summary(request: Request):
     try:
         return (await _get_services(request).portfolio.get_summary()).model_dump()
-    except PortfolioError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except PortfolioError:
+        raise HTTPException(status_code=400, detail="Failed to load portfolio summary.")
 
 
 @router.get("/holdings")
@@ -27,8 +32,8 @@ async def get_holdings(request: Request):
             "holdings": [h.model_dump() for h in portfolio.holdings],
             "cash_positions": portfolio.cash_positions,
         }
-    except PortfolioError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except PortfolioError:
+        raise HTTPException(status_code=400, detail="Failed to load holdings.")
 
 
 @router.get("/allocation/{allocation_type}")
@@ -44,11 +49,11 @@ async def get_allocation(request: Request, allocation_type: str):
         if alloc is None:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid type: {allocation_type}. Use 'asset_class', 'sector', or 'account'.",
+                detail="Invalid allocation type. Use 'asset_class', 'sector', or 'account'.",
             )
         return {"type": allocation_type, "allocation": alloc}
-    except PortfolioError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except PortfolioError:
+        raise HTTPException(status_code=400, detail="Failed to load allocation data.")
 
 
 _TICKER = Path(description="Stock ticker symbol", pattern=r"^[A-Z0-9.\-\^]{1,10}$")
@@ -58,5 +63,5 @@ _TICKER = Path(description="Stock ticker symbol", pattern=r"^[A-Z0-9.\-\^]{1,10}
 async def get_holding(request: Request, ticker: str = _TICKER):
     holding = await _get_services(request).portfolio.get_holding_detail(ticker)
     if holding is None:
-        raise HTTPException(status_code=404, detail=f"{ticker} not found in portfolio")
+        raise HTTPException(status_code=404, detail="Ticker not found in portfolio.")
     return holding.model_dump()

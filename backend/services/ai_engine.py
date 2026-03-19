@@ -30,6 +30,7 @@ Important guidelines:
 The user's portfolio includes stocks, ETFs, crypto, gold, bonds, and REITs across multiple accounts."""
 
 MAX_HISTORY = 20
+MAX_CONVERSATIONS = 500
 
 
 class AIEngine:
@@ -66,6 +67,14 @@ class AIEngine:
     async def stream_response(
         self, message: str, conversation_id: str
     ) -> AsyncIterator[str]:
+        # Evict oldest conversation if at capacity
+        if (
+            len(self._conversations) >= MAX_CONVERSATIONS
+            and conversation_id not in self._conversations
+        ):
+            oldest = next(iter(self._conversations))
+            del self._conversations[oldest]
+
         history = self._conversations[conversation_id]
 
         # Add user message

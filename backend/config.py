@@ -38,7 +38,13 @@ class Settings(BaseSettings):
     # Server
     api_host: str = "0.0.0.0"
     api_port: int = 8000
+    debug: bool = False
+    dashboard_api_key: Optional[str] = None
+
+    # CORS
     cors_origins: list[str] = ["http://localhost:8501", "http://localhost:3000"]
+    cors_allow_methods: list[str] = ["GET", "POST", "DELETE"]
+    cors_allow_headers: list[str] = ["Content-Type", "X-API-Key"]
 
     # Cache TTLs (seconds)
     cache_ttl_quote: int = 60
