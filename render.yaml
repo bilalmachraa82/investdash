@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: investdash
+    runtime: docker
+    plan: free
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: API_HOST
+        value: "0.0.0.0"
+      - key: PORT
+        value: "8501"
