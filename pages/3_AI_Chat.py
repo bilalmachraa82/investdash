@@ -3,6 +3,7 @@
 import streamlit as st
 
 from backend.client import InvestDashClient
+from backend.ui_theme import page_header
 
 client = InvestDashClient()
 
@@ -15,9 +16,8 @@ if "conversation_id" not in st.session_state:
 
 # ── Page ──────────────────────────────────────────────────────────────
 
-st.title("AI Chat")
+page_header("AI Chat", eyebrow="Assistant")
 
-# Check API health
 try:
     health = client.health()
     if not health.get("ai_available"):
@@ -27,9 +27,14 @@ except Exception as e:
     st.error(f"Cannot connect to API: {e}")
     st.stop()
 
-# Suggested prompts
+# Suggested prompts — rendered as chips (styled by theme.css)
 if not st.session_state.chat_messages:
-    st.caption("Ask questions about your portfolio, markets, or investment strategies.")
+    st.markdown(
+        '<div style="color:#94A3B8; font-size:0.9rem; margin-bottom:16px;">'
+        "Ask about your portfolio, markets, or investment strategies."
+        "</div>",
+        unsafe_allow_html=True,
+    )
     suggestions = [
         "What's my portfolio summary?",
         "Which of my holdings has the best performance?",

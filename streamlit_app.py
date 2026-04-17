@@ -2,6 +2,8 @@
 
 import streamlit as st
 
+from backend.ui_theme import inject_theme
+
 st.set_page_config(
     page_title="InvestDash",
     page_icon="📈",
@@ -9,81 +11,29 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── FinTech Dark Theme CSS ──────────────────────────────────────────
-st.markdown("""<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+inject_theme()
 
-html, body, [class*="css"] {
-    font-family: 'Inter', sans-serif;
-}
-
-/* Sidebar */
-section[data-testid="stSidebar"] {
-    background-color: #0D1B2A;
-}
-
-/* Metric cards — glassmorphism */
-div[data-testid="stMetric"] {
-    background: rgba(17, 29, 46, 0.6);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(41, 98, 255, 0.15);
-    border-radius: 10px;
-    padding: 16px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-}
-
-/* Positive / Negative delta colors */
-div[data-testid="stMetricDelta"] svg[data-testid="stMetricDeltaIcon-Up"] {
-    fill: #00C853;
-}
-div[data-testid="stMetricDelta"] svg[data-testid="stMetricDeltaIcon-Down"] {
-    fill: #FF1744;
-}
-[data-testid="stMetricDelta"]:has(svg[data-testid="stMetricDeltaIcon-Up"]) {
-    color: #00C853;
-}
-[data-testid="stMetricDelta"]:has(svg[data-testid="stMetricDeltaIcon-Down"]) {
-    color: #FF1744;
-}
-
-/* Buttons */
-button[kind="primary"], .stButton > button[kind="primary"] {
-    background-color: #2962FF;
-    border: none;
-    border-radius: 8px;
-    transition: background-color 0.2s ease;
-}
-button[kind="primary"]:hover {
-    background-color: #1E88E5;
-}
-
-/* Dataframe / Table */
-div[data-testid="stDataFrame"] {
-    background: rgba(17, 29, 46, 0.5);
-    border-radius: 10px;
-    border: 1px solid rgba(41, 98, 255, 0.1);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
-}
-
-/* Containers */
-div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] {
-    gap: 1rem;
-}
-
-/* Tab styling */
-button[data-baseweb="tab"] {
-    font-family: 'Inter', sans-serif;
-    font-weight: 500;
-}
-
-/* Expander */
-details {
-    background: rgba(17, 29, 46, 0.4);
-    border: 1px solid rgba(41, 98, 255, 0.1);
-    border-radius: 8px;
-}
-</style>""", unsafe_allow_html=True)
+# Sidebar brand mark
+with st.sidebar:
+    st.markdown(
+        """
+        <div style="padding: 8px 0 20px 0; border-bottom: 1px solid rgba(148,163,184,0.08); margin-bottom: 16px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:32px; height:32px; border-radius:8px;
+                        background: linear-gradient(135deg, #3B82F6 0%, #A855F7 100%);
+                        display:flex; align-items:center; justify-content:center;
+                        box-shadow: 0 4px 12px -4px rgba(59,130,246,0.5);">
+              <span style="color:white; font-weight:700; font-size:16px;">I</span>
+            </div>
+            <div>
+              <div style="font-weight:600; color:#E2E8F0; font-size:0.95rem; letter-spacing:-0.01em;">InvestDash</div>
+              <div style="font-size:0.7rem; color:#64748B; text-transform:uppercase; letter-spacing:0.08em;">AI Portfolio</div>
+            </div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 # Navigation
 pages = {
