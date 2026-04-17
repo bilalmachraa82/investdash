@@ -5,21 +5,21 @@ import plotly.graph_objects as go
 import pandas as pd
 
 from backend.client import InvestDashClient
+from backend.ui_theme import (
+    apply_chart_theme,
+    candlestick_colors,
+    fmt_money,
+    fmt_pct,
+    page_header,
+    pl_color,
+    section,
+)
 
 client = InvestDashClient()
 
-
-def _color(val: float) -> str:
-    if val > 0:
-        return "color: #00C853"
-    elif val < 0:
-        return "color: #FF1744"
-    return ""
-
-
 # ── Page ──────────────────────────────────────────────────────────────
 
-st.title("Portfolio")
+page_header("Portfolio", eyebrow="Holdings")
 
 try:
     data = client.get_holdings()
@@ -43,77 +43,82 @@ display_cols = [
 ]
 df = df[[c for c in display_cols if c in df.columns]]
 
-# Format numbers
-money_cols = ["current_price", "cost_basis_per_share", "current_value", "total_cost", "gain_loss"]
-for c in money_cols:
-    if c in df.columns:
-        df[c] = df[c].apply(lambda v: f"${v:,.2f}")
+# Keep numeric gain_loss for coloring; format others as strings
+numeric_gain_loss = df["gain_loss"].copy() if "gain_loss" in df.columns else None
+numeric_gain_loss_pct = df["gain_loss_pct"].copy() if "gain_loss_pct" in df.columns else None
 
-if "gain_loss_pct" in df.columns:
-    df["gain_loss_pct"] = df["gain_loss_pct"].apply(lambda v: f"{v:+.2f}%")
+styled = df.style.format(
+    {
+        "current_price": "${:,.2f}",
+        "cost_basis_per_share": "${:,.2f}",
+        "current_value": "${:,.2f}",
+        "total_cost": "${:,.2f}",
+        "gain_loss": "${:+,.2f}",
+        "gain_loss_pct": "{:+.2f}%",
+        "quantity": "{:,.4f}",
+    },
+    na_rep="—",
+)
 
-st.dataframe(df, use_container_width=True, hide_index=True)
+if numeric_gain_loss is not None:
+    styled = styled.map(pl_color, subset=["gain_loss"])
+if numeric_gain_loss_pct is not None:
+    styled = styled.map(pl_color, subset=["gain_loss_pct"])
+
+st.dataframe(styled, use_container_width=True, hide_index=True)
 
 # Cash positions
-st.subheader("Cash Positions")
+section("Cash Positions")
 cash_cols = st.columns(len(cash))
 for col, (currency, amount) in zip(cash_cols, cash.items()):
-    col.metric(currency, f"${amount:,.2f}")
-
-st.divider()
+    col.metric(currency, fmt_money(amount))
 
 # Drill-down
-st.subheader("Holding Detail")
+section("Holding Detail")
 tickers = [h["ticker"] for h in holdings]
-selected = st.selectbox("Select a holding", tickers)
+selected = st.selectbox("Select a holding", tickers, label_visibility="collapsed")
 
 if selected:
     try:
         detail = client.get_holding_detail(selected)
         col1, col2, col3 = st.columns(3)
-        col1.metric("Current Price", f"${detail.get('current_price', 0):,.2f}")
+        col1.metric("Current Price", fmt_money(detail.get("current_price", 0)))
         col2.metric("Quantity", f"{detail.get('quantity', 0):,.4f}")
         col3.metric(
             "Gain/Loss",
-            f"${detail.get('gain_loss', 0):,.2f}",
-            f"{detail.get('gain_loss_pct', 0):+.2f}%",
+            fmt_money(detail.get("gain_loss", 0)),
+            fmt_pct(detail.get("gain_loss_pct", 0)),
         )
 
-        # Price chart
         try:
             bars = client.get_history(selected, period="6mo")
             if bars:
                 chart_df = pd.DataFrame(bars)
                 fig = go.Figure(
-                    data=[go.Candlestick(
-                        x=chart_df["date"],
-                        open=chart_df["open"],
-                        high=chart_df["high"],
-                        low=chart_df["low"],
-                        close=chart_df["close"],
-                        increasing_line_color="#00C853", increasing_fillcolor="#00C853",
-                        decreasing_line_color="#FF1744", decreasing_fillcolor="#FF1744",
-                    )]
+                    data=[
+                        go.Candlestick(
+                            x=chart_df["date"],
+                            open=chart_df["open"],
+                            high=chart_df["high"],
+                            low=chart_df["low"],
+                            close=chart_df["close"],
+                            **candlestick_colors(),
+                        )
+                    ]
                 )
-                fig.update_layout(
-                    title=f"{selected} — 6 Month",
-                    height=400,
-                    margin=dict(t=40, b=20, l=40, r=20),
-                    xaxis_rangeslider_visible=False,
-                    template="plotly_dark",
-                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                )
+                fig.update_layout(xaxis_rangeslider_visible=False)
+                apply_chart_theme(fig, title=f"{selected} · 6 Month", height=420, show_legend=False)
                 st.plotly_chart(fig, use_container_width=True)
         except Exception:
             st.caption("Price history unavailable.")
     except Exception as e:
         st.warning(f"Could not load detail for {selected}: {e}")
 
-st.divider()
-
 # Allocation donut
-st.subheader("Allocation Breakdown")
-alloc_type = st.radio("View by", ["asset_class", "sector", "account"], horizontal=True)
+section("Allocation Breakdown")
+alloc_type = st.radio(
+    "View by", ["asset_class", "sector", "account"], horizontal=True, label_visibility="collapsed"
+)
 
 try:
     alloc = client.get_allocation(alloc_type)
@@ -121,16 +126,17 @@ try:
     if alloc_data:
         labels = list(alloc_data.keys())
         values = list(alloc_data.values())
-        fintech_colors = ["#2962FF", "#00E5FF", "#00C853", "#FF1744", "#FFAB00", "#AA00FF", "#3D5AFE", "#1DE9B6"]
         fig = go.Figure(
-            data=[go.Pie(labels=labels, values=values, hole=0.4,
-                         marker=dict(colors=fintech_colors[:len(labels)]))]
+            data=[
+                go.Pie(
+                    labels=labels,
+                    values=values,
+                    hole=0.55,
+                    marker=dict(line=dict(color="rgba(0,0,0,0)", width=0)),
+                )
+            ]
         )
-        fig.update_layout(
-            height=400, margin=dict(t=20, b=20, l=20, r=20),
-            template="plotly_dark",
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        )
+        apply_chart_theme(fig, height=420, show_legend=True)
         st.plotly_chart(fig, use_container_width=True)
 except Exception:
     st.caption("Allocation data unavailable.")

@@ -4,10 +4,16 @@ import streamlit as st
 import pandas as pd
 
 from backend.client import InvestDashClient
+from backend.ui_theme import (
+    fmt_money,
+    page_header,
+    pl_color,
+    section,
+)
 
 client = InvestDashClient()
 
-st.title("Trading")
+page_header("Trading", eyebrow="Paper Orders")
 
 # ── Check trading availability ──────────────────────────────────────
 try:
@@ -42,19 +48,23 @@ if status.get("status") == "not_configured":
 
 # ── Trading is active — build the UI ────────────────────────────────
 broker = status.get("broker", "simulator")
-broker_label = "Local Simulator ($100k virtual)" if broker == "simulator" else "Alpaca Paper Trading"
-st.caption(f"Paper Trading via {broker_label}")
+broker_label = "Local Simulator · $100k virtual" if broker == "simulator" else "Alpaca Paper Trading"
+st.markdown(
+    f'<div style="color:#94A3B8; font-size:0.85rem; margin: -8px 0 16px 0;">'
+    f'Routing via <span style="color:#E2E8F0; font-weight:500;">{broker_label}</span>'
+    f'</div>',
+    unsafe_allow_html=True,
+)
 
-# Tabs
 tab_order, tab_positions, tab_orders, tab_history, tab_account = st.tabs(
     ["New Order", "Positions", "Open Orders", "Trade History", "Account"]
 )
 
 # ===================================================================
-# TAB 1: New Order (preview → confirm → execute)
+# TAB 1: New Order
 # ===================================================================
 with tab_order:
-    st.subheader("Place an Order")
+    section("Place an Order")
 
     col1, col2 = st.columns(2)
     with col1:
@@ -72,7 +82,6 @@ with tab_order:
             stop_price = st.number_input("Stop Price ($)", min_value=0.01, step=0.01, format="%.2f")
         time_in_force = st.selectbox("Time in Force", ["day", "gtc", "ioc"])
 
-    # Build trade payload
     trade_payload = {
         "symbol": symbol,
         "side": side,
@@ -87,11 +96,9 @@ with tab_order:
     if stop_price is not None:
         trade_payload["stop_price"] = stop_price
 
-    # Session state for preview flow
     if "trade_preview" not in st.session_state:
         st.session_state.trade_preview = None
 
-    # Preview button
     if st.button("Preview Order", type="primary", use_container_width=True):
         if not symbol:
             st.warning("Enter a symbol.")
@@ -102,7 +109,6 @@ with tab_order:
                     st.session_state.trade_preview = preview
                 except Exception as e:
                     error_detail = str(e)
-                    # Extract detail from HTTP errors
                     if hasattr(e, "response") and e.response is not None:
                         try:
                             error_detail = e.response.json().get("detail", error_detail)
@@ -111,11 +117,9 @@ with tab_order:
                     st.error(f"Preview failed: {error_detail}")
                     st.session_state.trade_preview = None
 
-    # Show preview card
     preview = st.session_state.trade_preview
     if preview is not None:
-        st.divider()
-        st.subheader("Order Preview")
+        section("Order Preview")
 
         pc1, pc2, pc3 = st.columns(3)
         pc1.metric("Symbol", preview["symbol"])
@@ -123,17 +127,17 @@ with tab_order:
         pc3.metric("Quantity", f"{preview['quantity']:g}")
 
         pc4, pc5, pc6 = st.columns(3)
-        pc4.metric("Current Price", f"${preview['current_price']:,.2f}")
-        pc5.metric("Estimated Total", f"${preview['estimated_total']:,.2f}")
+        pc4.metric("Current Price", fmt_money(preview["current_price"]))
+        pc5.metric("Estimated Total", fmt_money(preview["estimated_total"]))
         pc6.metric("Portfolio Impact", f"{preview['portfolio_impact_pct']:.2f}%")
 
-        st.caption(f"Order type: {preview['order_type']}  |  Account: {preview['account_mode']}  |  Broker: {preview['broker']}")
+        st.caption(
+            f"Order type: {preview['order_type']}  ·  Account: {preview['account_mode']}  ·  Broker: {preview['broker']}"
+        )
 
-        # Warnings
         for w in preview.get("warnings", []):
             st.warning(w)
 
-        # Confirm & Execute
         col_exec, col_cancel = st.columns(2)
         with col_exec:
             if st.button("Confirm & Execute", type="primary", use_container_width=True):
@@ -142,11 +146,10 @@ with tab_order:
                         result = client.execute_trade(trade_payload)
                         st.session_state.trade_preview = None
                         st.success(
-                            f"Order {result['status']}! "
-                            f"ID: `{result['order_id']}` — {result['message']}"
+                            f"Order {result['status']}! ID: `{result['order_id']}` — {result['message']}"
                         )
                         if result.get("filled_price"):
-                            st.info(f"Filled at ${result['filled_price']:,.2f}")
+                            st.info(f"Filled at {fmt_money(result['filled_price'])}")
                     except Exception as e:
                         error_detail = str(e)
                         if hasattr(e, "response") and e.response is not None:
@@ -164,34 +167,30 @@ with tab_order:
 # TAB 2: Positions
 # ===================================================================
 with tab_positions:
-    st.subheader("Current Positions")
+    section("Current Positions")
     try:
         positions = client.get_positions()
         if not positions:
             st.info("No open positions.")
         else:
             df = pd.DataFrame(positions)
-            # Convert numeric columns
             for col in ["qty", "market_value", "cost_basis", "unrealized_pl", "unrealized_plpc", "current_price", "avg_entry_price"]:
                 if col in df.columns:
                     df[col] = pd.to_numeric(df[col], errors="coerce")
 
-            # Format display
             display_df = df[["symbol", "qty", "current_price", "avg_entry_price", "market_value", "unrealized_pl", "unrealized_plpc"]].copy()
             display_df.columns = ["Symbol", "Qty", "Price", "Avg Entry", "Market Value", "P/L ($)", "P/L (%)"]
 
-            # Color P/L
-            def color_pl(val):
-                if val > 0:
-                    return "color: #00C853"
-                elif val < 0:
-                    return "color: #FF1744"
-                return ""
-
             st.dataframe(
                 display_df.style
-                    .format({"Price": "${:,.2f}", "Avg Entry": "${:,.2f}", "Market Value": "${:,.2f}", "P/L ($)": "${:,.2f}", "P/L (%)": "{:.2%}"})
-                    .map(color_pl, subset=["P/L ($)", "P/L (%)"]),
+                    .format({
+                        "Price": "${:,.2f}",
+                        "Avg Entry": "${:,.2f}",
+                        "Market Value": "${:,.2f}",
+                        "P/L ($)": "${:+,.2f}",
+                        "P/L (%)": "{:+.2%}",
+                    })
+                    .map(pl_color, subset=["P/L ($)", "P/L (%)"]),
                 use_container_width=True,
                 hide_index=True,
             )
@@ -199,8 +198,8 @@ with tab_positions:
             total_value = df["market_value"].sum()
             total_pl = df["unrealized_pl"].sum()
             mc1, mc2 = st.columns(2)
-            mc1.metric("Total Market Value", f"${total_value:,.2f}")
-            mc2.metric("Total Unrealized P/L", f"${total_pl:,.2f}", delta=f"${total_pl:,.2f}")
+            mc1.metric("Total Market Value", fmt_money(total_value))
+            mc2.metric("Total Unrealized P/L", fmt_money(total_pl), delta=fmt_money(total_pl))
     except Exception as e:
         st.error(f"Could not load positions: {e}")
 
@@ -208,7 +207,7 @@ with tab_positions:
 # TAB 3: Open Orders
 # ===================================================================
 with tab_orders:
-    st.subheader("Open Orders")
+    section("Open Orders")
     try:
         orders = client.get_orders()
         if not orders:
@@ -223,13 +222,13 @@ with tab_orders:
                     oc4.write(f"Status: {order['status']}")
 
                     if order.get("limit_price"):
-                        st.caption(f"Limit: ${float(order['limit_price']):,.2f}")
+                        st.caption(f"Limit: {fmt_money(float(order['limit_price']))}")
                     if order.get("stop_price"):
-                        st.caption(f"Stop: ${float(order['stop_price']):,.2f}")
+                        st.caption(f"Stop: {fmt_money(float(order['stop_price']))}")
 
                     st.caption(f"Created: {order['created_at']}")
 
-                    if st.button(f"Cancel", key=f"cancel_{order['id']}"):
+                    if st.button("Cancel", key=f"cancel_{order['id']}"):
                         try:
                             client.cancel_order(order["id"])
                             st.success(f"Order {order['id'][:8]}... cancelled.")
@@ -243,7 +242,7 @@ with tab_orders:
 # TAB 4: Trade History
 # ===================================================================
 with tab_history:
-    st.subheader("Trade History")
+    section("Trade History")
     try:
         log = client.get_trade_log(limit=100)
         if not log:
@@ -274,22 +273,21 @@ with tab_history:
 # TAB 5: Account Overview
 # ===================================================================
 with tab_account:
-    st.subheader("Alpaca Paper Account")
+    section("Alpaca Paper Account")
     try:
         acct = client.get_account()
 
         a1, a2, a3 = st.columns(3)
-        a1.metric("Portfolio Value", f"${float(acct['portfolio_value']):,.2f}")
-        a2.metric("Cash", f"${float(acct['cash']):,.2f}")
-        a3.metric("Buying Power", f"${float(acct['buying_power']):,.2f}")
+        a1.metric("Portfolio Value", fmt_money(float(acct["portfolio_value"])))
+        a2.metric("Cash", fmt_money(float(acct["cash"])))
+        a3.metric("Buying Power", fmt_money(float(acct["buying_power"])))
 
         a4, a5, a6 = st.columns(3)
-        a4.metric("Equity", f"${float(acct['equity']):,.2f}")
+        a4.metric("Equity", fmt_money(float(acct["equity"])))
         a5.metric("Status", acct["status"].upper())
         a6.metric("Currency", acct.get("currency", "USD"))
 
-        st.divider()
-        st.caption("Safety Limits")
+        section("Safety Limits")
         sl1, sl2, sl3 = st.columns(3)
         sl1.write("Max single order: **10% of portfolio**")
         sl2.write("Max single order: **$10,000**")
